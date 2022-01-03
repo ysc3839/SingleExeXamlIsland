@@ -10,4 +10,18 @@
 // add headers that you want to pre-compile here
 #include "framework.h"
 
+#pragma push_macro("GetCurrentTime")
+#undef GetCurrentTime
+
+#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.system.h>
+#include <winrt/windows.ui.xaml.hosting.h>
+#include <windows.ui.xaml.hosting.desktopwindowxamlsource.h>
+#include <winrt/windows.ui.xaml.controls.h>
+#include <winrt/Windows.ui.xaml.media.h>
+#include <winrt/Windows.UI.Core.h>
+#include <winrt/Xaml.h>
+
+#pragma pop_macro("GetCurrentTime")
+
 #endif //PCH_H

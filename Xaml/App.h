@@ -1,14 +1,18 @@
 #pragma once
-#include "App.xaml.g.h"
+#include "App.g.h"
+#include "App.base.h"
 
 namespace winrt::Xaml::implementation
 {
-    struct App : AppT<App>
-    {
-        App();
+	struct App : AppT2<App>
+	{
+		App();
+	};
+}
 
-        void OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEventArgs const&);
-        void OnSuspending(IInspectable const&, Windows::ApplicationModel::SuspendingEventArgs const&);
-        void OnNavigationFailed(IInspectable const&, Windows::UI::Xaml::Navigation::NavigationFailedEventArgs const&);
-    };
+namespace winrt::Xaml::factory_implementation
+{
+	class App : public AppT<App, implementation::App>
+	{
+	};
 }

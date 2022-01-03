@@ -1,0 +1,5 @@
+#include "targetver.h"
+#include "windows.h"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+1 PRI RESOURCE_PRI_PATH
