@@ -21,6 +21,7 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void                AdjustLayout(HWND);
+HRESULT             AddPackageDepends(LPCWSTR);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -32,6 +33,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	// TODO: Place code here.
 	winrt::init_apartment(winrt::apartment_type::single_threaded);
+
+	AddPackageDepends(L"Microsoft.UI.Xaml.2.6_8wekyb3d8bbwe");
+	//AddPackageDepends(L"Microsoft.UI.Xaml.CBS_8wekyb3d8bbwe");
+
+	AddPackageDepends(L"Microsoft.VCLibs.140.00_8wekyb3d8bbwe");
 
 	wchar_t exePath[MAX_PATH];
 	GetModuleFileNameW(hInstance, exePath, MAX_PATH);
@@ -233,4 +239,22 @@ void AdjustLayout(HWND hWnd)
 		::GetWindowRect(hWnd, &windowRect);
 		::SetWindowPos(xamlHostHwnd, NULL, 0, 0, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, SWP_SHOWWINDOW);
 	}
+}
+
+HRESULT AddPackageDepends(LPCWSTR packageFamilyName)
+{
+	PWSTR packageDependencyId;
+	HRESULT hr = TryCreatePackageDependency(nullptr, packageFamilyName, {}, PackageDependencyProcessorArchitectures_None, PackageDependencyLifetimeKind_Process, nullptr, CreatePackageDependencyOptions_None, &packageDependencyId);
+	if (SUCCEEDED(hr))
+	{
+		PACKAGEDEPENDENCY_CONTEXT context;
+		PWSTR packageFullName;
+		hr = AddPackageDependency(packageDependencyId, 0, AddPackageDependencyOptions_None, &context, &packageFullName);
+		if (SUCCEEDED(hr))
+		{
+			HeapFree(GetProcessHeap(), 0, packageFullName);
+		}
+		HeapFree(GetProcessHeap(), 0, packageDependencyId);
+	}
+	return hr;
 }
