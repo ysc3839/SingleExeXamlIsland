@@ -14,6 +14,8 @@
 #include <winrt/Windows.UI.Xaml.Markup.h>
 #include <winrt/Windows.UI.Xaml.Navigation.h>
 
+// WinUI 2.7
+
 #include "winrt/Microsoft.UI.Xaml.Automation.Peers.h"
 #include "winrt/Microsoft.UI.Xaml.Controls.Primitives.h"
 #include "winrt/Microsoft.UI.Xaml.Media.h"

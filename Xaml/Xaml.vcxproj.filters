@@ -21,9 +21,9 @@
     <ClInclude Include="App.base.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <AppxManifest Include="Package.appxmanifest" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

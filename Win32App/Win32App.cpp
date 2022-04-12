@@ -34,9 +34,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// TODO: Place code here.
 	winrt::init_apartment(winrt::apartment_type::single_threaded);
 
-	AddPackageDepends(L"Microsoft.UI.Xaml.2.6_8wekyb3d8bbwe");
-	//AddPackageDepends(L"Microsoft.UI.Xaml.CBS_8wekyb3d8bbwe");
-
+	AddPackageDepends(L"Microsoft.UI.Xaml.2.7_8wekyb3d8bbwe");
 	AddPackageDepends(L"Microsoft.VCLibs.140.00_8wekyb3d8bbwe");
 
 	wchar_t exePath[MAX_PATH];
