@@ -5,9 +5,6 @@
 #include "Win32App.h"
 #include "MrmHook.h"
 
-// https://github.com/ysc3839/SingleExeXamlIsland#winui-2
-#pragma comment(lib, "OneCoreUAP_apiset.Lib")
-
 #define MAX_LOADSTRING 100
 
 // Global Variables:
