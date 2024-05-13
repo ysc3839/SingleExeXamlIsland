@@ -11,52 +11,12 @@
 
 #include "urfw.h"
 
-#include "catalog.h"
-#include "TypeResolution.h"
+#include <detours.h>
 
-#include <../Detours/detours.h>
-
-// Ensure that metadata resolution functions are imported so they can be detoured
-extern "C"
-{
-    __declspec(dllimport) HRESULT WINAPI RoGetMetaDataFile(
-        const HSTRING name,
-        IMetaDataDispenserEx* metaDataDispenser,
-        HSTRING* metaDataFilePath,
-        IMetaDataImport2** metaDataImport,
-        mdTypeDef* typeDefToken);
-
-    __declspec(dllimport) HRESULT WINAPI RoParseTypeName(
-        HSTRING typeName,
-        DWORD* partsCount,
-        HSTRING** typeNameParts);
-
-    __declspec(dllimport) HRESULT WINAPI RoResolveNamespace(
-        const HSTRING name,
-        const HSTRING windowsMetaDataDir,
-        const DWORD packageGraphDirsCount,
-        const HSTRING* packageGraphDirs,
-        DWORD* metaDataFilePathsCount,
-        HSTRING** metaDataFilePaths,
-        DWORD* subNamespacesCount,
-        HSTRING** subNamespaces);
-
-    __declspec(dllimport) HRESULT WINAPI RoIsApiContractPresent(
-        PCWSTR name,
-        UINT16 majorVersion,
-        UINT16 minorVersion,
-        BOOL* present);
-
-    __declspec(dllimport) HRESULT WINAPI RoIsApiContractMajorVersionPresent(
-        PCWSTR name,
-        UINT16 majorVersion,
-        BOOL* present);
-}
+#include "MddWinRT.h"
 
 static decltype(RoActivateInstance)* TrueRoActivateInstance = RoActivateInstance;
 static decltype(RoGetActivationFactory)* TrueRoGetActivationFactory = RoGetActivationFactory;
-static decltype(RoGetMetaDataFile)* TrueRoGetMetaDataFile = RoGetMetaDataFile;
-static decltype(RoResolveNamespace)* TrueRoResolveNamespace = RoResolveNamespace;
 
 enum class ActivationLocation
 {
@@ -141,7 +101,7 @@ HRESULT GetActivationLocation(HSTRING activatableClassId, ActivationLocation &ac
     RETURN_IF_FAILED(CoGetApartmentType(&aptType, &aptQualifier));
 
     ABI::Windows::Foundation::ThreadingType threading_model;
-    const HRESULT hr{ WinRTGetThreadingModel(activatableClassId, &threading_model) };
+    const HRESULT hr{ MddCore::WinRT::GetThreadingModel(activatableClassId, threading_model) };
     if (FAILED(hr))
     {
         if (hr == REGDB_E_CLASSNOTREG)  // Not found
@@ -194,7 +154,7 @@ HRESULT WINAPI RoActivateInstanceDetour(HSTRING activatableClassId, IInspectable
     if (location == ActivationLocation::CurrentApartment)
     {
         Microsoft::WRL::ComPtr<IActivationFactory> pFactory;
-        RETURN_IF_FAILED(WinRTGetActivationFactory(activatableClassId, __uuidof(IActivationFactory), (void**)&pFactory));
+        RETURN_IF_FAILED(MddCore::WinRT::GetActivationFactory(activatableClassId, __uuidof(IActivationFactory), (void**)&pFactory));
         return pFactory->ActivateInstance(instance);
     }
 
@@ -218,7 +178,7 @@ HRESULT WINAPI RoActivateInstanceDetour(HSTRING activatableClassId, IInspectable
             CrossApartmentMTAActData* data = reinterpret_cast<CrossApartmentMTAActData*>(pComCallData->pUserDefined);
             Microsoft::WRL::ComPtr<IInspectable> instance;
             Microsoft::WRL::ComPtr<IActivationFactory> pFactory;
-            RETURN_IF_FAILED(WinRTGetActivationFactory(data->activatableClassId, __uuidof(IActivationFactory), (void**)&pFactory));
+            RETURN_IF_FAILED(MddCore::WinRT::GetActivationFactory(data->activatableClassId, __uuidof(IActivationFactory), (void**)&pFactory));
             RETURN_IF_FAILED(pFactory->ActivateInstance(&instance));
             RETURN_IF_FAILED(CoMarshalInterThreadInterfaceInStream(IID_IInspectable, instance.Get(), &data->stream));
             return S_OK;
@@ -241,7 +201,7 @@ HRESULT WINAPI RoGetActivationFactoryDetour(HSTRING activatableClassId, REFIID i
     // Activate in current apartment
     if (location == ActivationLocation::CurrentApartment)
     {
-        RETURN_IF_FAILED(WinRTGetActivationFactory(activatableClassId, iid, factory));
+        RETURN_IF_FAILED(MddCore::WinRT::GetActivationFactory(activatableClassId, iid, factory));
         return S_OK;
     }
     // Cross apartment MTA activation
@@ -262,7 +222,7 @@ HRESULT WINAPI RoGetActivationFactoryDetour(HSTRING activatableClassId, REFIID i
         {
             CrossApartmentMTAActData* data = reinterpret_cast<CrossApartmentMTAActData*>(pComCallData->pUserDefined);
             Microsoft::WRL::ComPtr<IActivationFactory> pFactory;
-            RETURN_IF_FAILED(WinRTGetActivationFactory(data->activatableClassId, __uuidof(IActivationFactory), (void**)&pFactory));
+            RETURN_IF_FAILED(MddCore::WinRT::GetActivationFactory(data->activatableClassId, __uuidof(IActivationFactory), (void**)&pFactory));
             RETURN_IF_FAILED(CoMarshalInterThreadInterfaceInStream(IID_IActivationFactory, pFactory.Get(), &data->stream));
             return S_OK;
         },
@@ -271,152 +231,11 @@ HRESULT WINAPI RoGetActivationFactoryDetour(HSTRING activatableClassId, REFIID i
     return S_OK;
 }
 
-HRESULT WINAPI RoGetMetaDataFileDetour(
-    const HSTRING name,
-    IMetaDataDispenserEx* metaDataDispenser,
-    HSTRING* metaDataFilePath,
-    IMetaDataImport2** metaDataImport,
-    mdTypeDef* typeDefToken)
-{
-    HRESULT hr = WinRTGetMetadataFile(name, metaDataDispenser, metaDataFilePath, metaDataImport, typeDefToken);
-    // Don't fallback on RO_E_METADATA_NAME_IS_NAMESPACE failure. This is the intended behavior for namespace names.
-    if (FAILED(hr) && hr != RO_E_METADATA_NAME_IS_NAMESPACE)
-    {
-        hr = TrueRoGetMetaDataFile(name, metaDataDispenser, metaDataFilePath, metaDataImport, typeDefToken);
-    }
-    return hr;
-}
-
-HRESULT WINAPI RoResolveNamespaceDetour(
-    const HSTRING name,
-    const HSTRING windowsMetaDataDir,
-    const DWORD packageGraphDirsCount,
-    const HSTRING* packageGraphDirs,
-    DWORD* metaDataFilePathsCount,
-    HSTRING** metaDataFilePaths,
-    DWORD* subNamespacesCount,
-    HSTRING** subNamespaces)
-{
-    PCWSTR exeFilePath = nullptr;
-    UndockedRegFreeWinRT::GetProcessExeDir(&exeFilePath);
-    auto pathReference = Microsoft::WRL::Wrappers::HStringReference(exeFilePath);
-    HSTRING packageGraphDirectories[] = { pathReference.Get() };
-    HRESULT hr = TrueRoResolveNamespace(name, pathReference.Get(),
-        ARRAYSIZE(packageGraphDirectories), packageGraphDirectories,
-        metaDataFilePathsCount, metaDataFilePaths,
-        subNamespacesCount, subNamespaces);
-    if (FAILED(hr))
-    {
-        hr = TrueRoResolveNamespace(name, windowsMetaDataDir,
-            packageGraphDirsCount, packageGraphDirs,
-            metaDataFilePathsCount, metaDataFilePaths,
-            subNamespacesCount, subNamespaces);
-    }
-    return hr;
-}
-
-HRESULT ExtRoLoadCatalog()
-{
-    WCHAR filePath[MAX_PATH]{};
-    if (!GetModuleFileNameW(nullptr, filePath, _countof(filePath)))
-    {
-        return HRESULT_FROM_WIN32(GetLastError());
-    }
-    std::wstring manifestPath(filePath);
-    HANDLE hActCtx{ INVALID_HANDLE_VALUE };
-    auto exit = wil::scope_exit([&]
-    {
-        if (hActCtx != INVALID_HANDLE_VALUE)
-        {
-            ReleaseActCtx(hActCtx);
-        }
-    });
-    wil::unique_hmodule exeModule;
-    RETURN_IF_WIN32_BOOL_FALSE(GetModuleHandleExW(0, nullptr, &exeModule));
-    ACTCTXW acw{ sizeof(acw) };
-    acw.lpSource = manifestPath.c_str();
-    acw.hModule = exeModule.get();
-    acw.lpResourceName = MAKEINTRESOURCEW(1);
-    acw.dwFlags = ACTCTX_FLAG_HMODULE_VALID | ACTCTX_FLAG_RESOURCE_NAME_VALID;
-
-    hActCtx = CreateActCtxW(&acw);
-    if ((hActCtx == INVALID_HANDLE_VALUE) || (hActCtx == nullptr))
-    {
-        const auto lastError{ GetLastError() };
-        if ((lastError == ERROR_RESOURCE_DATA_NOT_FOUND) || (lastError == ERROR_RESOURCE_TYPE_NOT_FOUND))
-        {
-            // No resources in the executable (ERROR_RESOURCE_DATA_NOT_FOUND) or there are resources
-            // but not an embedded SxS manifest we're looking for (ERROR_RESOURCE_TYPE_NOT_FOUND).
-            // Either way it's Not Found == Nothing to do!
-            return S_OK;
-        }
-        RETURN_WIN32(lastError);
-    }
-
-    PACTIVATION_CONTEXT_DETAILED_INFORMATION actCtxInfo = nullptr;
-    SIZE_T bufferSize{};
-    (void)QueryActCtxW(0,
-        hActCtx,
-        nullptr,
-        ActivationContextDetailedInformation,
-        nullptr,
-        0,
-        &bufferSize);
-    RETURN_HR_IF(HRESULT_FROM_WIN32(GetLastError()), bufferSize == 0);
-    auto actCtxInfoBuffer{ std::make_unique<BYTE[]>(bufferSize) };
-    RETURN_IF_NULL_ALLOC(actCtxInfoBuffer);
-    actCtxInfo = reinterpret_cast<PACTIVATION_CONTEXT_DETAILED_INFORMATION>(actCtxInfoBuffer.get());
-
-    RETURN_IF_WIN32_BOOL_FALSE(QueryActCtxW(0,
-        hActCtx,
-        nullptr,
-        ActivationContextDetailedInformation,
-        actCtxInfo,
-        bufferSize,
-        nullptr));
-
-    for (DWORD index = 1; index <= actCtxInfo->ulAssemblyCount; index++)
-    {
-        bufferSize = 0;
-        PACTIVATION_CONTEXT_ASSEMBLY_DETAILED_INFORMATION asmInfo = nullptr;
-        (void)QueryActCtxW(0,
-            hActCtx,
-            &index,
-            AssemblyDetailedInformationInActivationContext,
-            nullptr,
-            0,
-            &bufferSize);
-        RETURN_HR_IF(HRESULT_FROM_WIN32(GetLastError()), bufferSize == 0);
-        auto asmInfobuffer{ std::make_unique<BYTE[]>(bufferSize) };
-        RETURN_IF_NULL_ALLOC(asmInfobuffer);
-        asmInfo = reinterpret_cast<PACTIVATION_CONTEXT_ASSEMBLY_DETAILED_INFORMATION>(asmInfobuffer.get());
-
-        RETURN_IF_WIN32_BOOL_FALSE(QueryActCtxW(0,
-            hActCtx,
-            &index,
-            AssemblyDetailedInformationInActivationContext,
-            asmInfo,
-            bufferSize,
-            nullptr));
-        RETURN_IF_FAILED(LoadManifestFromPath(asmInfo->lpAssemblyManifestPath));
-    }
-    return S_OK;
-}
-
 HRESULT UrfwInitialize() noexcept
 {
     DetourAttach(&(PVOID&)TrueRoActivateInstance, RoActivateInstanceDetour);
     DetourAttach(&(PVOID&)TrueRoGetActivationFactory, RoGetActivationFactoryDetour);
-    DetourAttach(&(PVOID&)TrueRoGetMetaDataFile, RoGetMetaDataFileDetour);
-    DetourAttach(&(PVOID&)TrueRoResolveNamespace, RoResolveNamespaceDetour);
-    try
-    {
-        RETURN_IF_FAILED(ExtRoLoadCatalog());
-    }
-    catch (...)
-    {
-        RETURN_CAUGHT_EXCEPTION();
-    }
+
     return S_OK;
 }
 
@@ -424,11 +243,4 @@ void UrfwShutdown() noexcept
 {
     DetourDetach(&(PVOID&)TrueRoActivateInstance, RoActivateInstanceDetour);
     DetourDetach(&(PVOID&)TrueRoGetActivationFactory, RoGetActivationFactoryDetour);
-    DetourDetach(&(PVOID&)TrueRoGetMetaDataFile, RoGetMetaDataFileDetour);
-    DetourDetach(&(PVOID&)TrueRoResolveNamespace, RoResolveNamespaceDetour);
-}
-
-extern "C" void WINAPI winrtact_Initialize()
-{
-    return;
 }

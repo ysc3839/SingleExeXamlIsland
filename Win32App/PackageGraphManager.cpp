@@ -150,6 +150,11 @@ HRESULT MddCore::PackageGraphManager::GetCurrentPackageInfo3(
         *revisionId = GetPackageGraphRevisionId();
         return S_OK;
     }
+    else if (packageInfoType == PackageInfoType_PackageInfoAliases)
+    {
+        *bufferLength = 0;
+        return S_OK;
+    }
     else if ((packageInfoType != PackageInfoType_PackageInfoInstallPath) &&
                (packageInfoType != PackageInfoType_PackageInfoMutablePath) &&
                (packageInfoType != PackageInfoType_PackageInfoEffectivePath) &&

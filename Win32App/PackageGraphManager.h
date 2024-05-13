@@ -4,9 +4,9 @@
 #if !defined(PACKAGEGRAPHMANAGER_H)
 #define PACKAGEGRAPHMANAGER_H
 
-#include <appmodel_msixdynamicdependency.h>
+#include "appmodel_msixdynamicdependency.h"
 
-#include <PackageGraph.h>
+#include "PackageGraph.h"
 
 namespace MddCore
 {

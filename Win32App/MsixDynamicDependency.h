@@ -219,12 +219,6 @@ STDAPI MddGetIdForPackageDependencyContext(
 /// Return the package graph's current revision id.
 STDAPI_(UINT32) MddGetPackageGraphRevisionId() noexcept;
 
-/// Return the package graph's current revision id.
-///
-/// @note This API is deprecated and will be removed in a future release.
-///       Use MddGetPackageGraphRevisionId().
-STDAPI_(UINT32) MddGetGenerationId() noexcept;
-
 #endif // defined(__cplusplus)
 
 #endif // MSIXDYNAMICDEPENDENCY_H

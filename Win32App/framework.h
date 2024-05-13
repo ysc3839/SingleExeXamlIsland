@@ -5,8 +5,14 @@
 // Windows Header Files
 #include <windows.h>
 #include <appmodel.h>
+#include <shlwapi.h>
+#include <pathcch.h>
+
 // C RunTime Header Files
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
+
+#include <filesystem>
+#include <mutex>

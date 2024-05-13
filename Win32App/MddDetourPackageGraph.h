@@ -10,12 +10,6 @@ HRESULT WINAPI MddDetourPackageGraphInitialize() noexcept;
 
 void WINAPI MddDetourPackageGraphShutdown() noexcept;
 
-LONG WINAPI GetCurrentStaticPackageInfo(
-    const UINT32 flags,
-    UINT32* bufferLength,
-    BYTE* buffer,
-    UINT32* count) noexcept;
-
 LONG MddGetPackageInfo1Or2(
     PACKAGE_INFO_REFERENCE packageInfoReference,
     UINT32 flags,

@@ -16,10 +16,6 @@ public:
     ~PackageDependencyManager() = delete;
 
 public:
-    static bool ExistsPackageDependency(
-        PSID user,
-        _In_ PCWSTR packageDependencyId);
-
     static void CreatePackageDependency(
         PSID user,
         _In_ PCWSTR packageFamilyName,
@@ -28,10 +24,6 @@ public:
         MddPackageDependencyLifetimeKind lifetimeKind,
         PCWSTR lifetimeArtifact,
         MddCreatePackageDependencyOptions options,
-        _Outptr_result_maybenull_ PWSTR* packageDependencyId);
-
-    static void CreatePackageDependency(
-        const MddCore::PackageDependency& packageDependency,
         _Outptr_result_maybenull_ PWSTR* packageDependencyId);
 
     static void DeletePackageDependency(
@@ -43,12 +35,6 @@ public:
         _In_ PCWSTR packageDependencyId);
 
 private:
-    static const PackageDependency* GetPackageDependencyInMemory(
-        _In_ PCWSTR packageDependencyId);
-
-    static const PackageDependency* GetPackageDependencyInDataStore(
-        _In_ PCWSTR packageDependencyId);
-
     static void Verify(
         const MddCore::PackageDependency& packageDependency);
 };

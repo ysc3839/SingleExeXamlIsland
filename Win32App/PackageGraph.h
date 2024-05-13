@@ -96,10 +96,6 @@ private:
 #endif
     }
 
-    void UpdatePath();
-
-    std::wstring BuildPathList();
-
 public:
     const std::vector<MddCore::PackageGraphNode>& PackageGraphNodes() const
     {

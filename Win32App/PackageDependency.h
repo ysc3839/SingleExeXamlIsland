@@ -267,61 +267,6 @@ public:
         return m_packageDependencyId.empty();
     }
 
-    std::wstring ToJSON() const;
-    std::string ToJSONUtf8() const;
-
-    static PackageDependency FromJSON(const winrt::hstring& json);
-    static PackageDependency FromJSON(PCSTR jsonUtf8);
-
-    bool IsExpired() const;
-
-private:
-    static bool IsRegistryKeyExists(
-        const std::wstring& key);
-
-    static HKEY ParseRegistryKey(
-        const std::wstring& key,
-        PCWSTR& subkey);
-
-    static HKEY ParseRegistryKey(
-        const std::wstring& key,
-        size_t& offsetToSubkey);
-
-private:
-    static winrt::hstring ToString(const MddPackageDependencyLifetimeKind lifetimeKind);
-
-    void LifetimeKind(const winrt::hstring& lifetimeKind);
-
-    static int32_t int32_from_string(PCWSTR s)
-    {
-        if (!s)
-        {
-            return 0;
-        }
-        auto base{ (((s[0] == L'0') && s[1] == L'x') ? 16 : 10) };
-        return wcstol(s, nullptr, base);
-    }
-
-    static uint32_t uint32_from_string(PCWSTR s)
-    {
-        if (!s)
-        {
-            return 0;
-        }
-        auto base{ (((s[0] == L'0') && s[1] == L'x') ? 16 : 10) };
-        return wcstoul(s, nullptr, base);
-    }
-
-    static uint64_t uint64_from_string(PCWSTR s)
-    {
-        if (!s)
-        {
-            return 0;
-        }
-        auto base{ (((s[0] == L'0') && s[1] == L'x') ? 16 : 10) };
-        return wcstoull(s, nullptr, base);
-    }
-
 private:
     wil::unique_any_psid m_user;
     std::wstring m_packageFamilyName;

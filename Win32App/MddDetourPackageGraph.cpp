@@ -3,15 +3,15 @@
 
 #include "pch.h"
 
-#include <IsWindowsVersion.h>
+#include "IsWindowsVersion.h"
 
 #include "MddDetourPackageGraph.h"
 
 #include "PackageGraphManager.h"
 
-#include "MddWin11.h"
+//#include "MddWin11.h"
 
-#include <../Detours/detours.h>
+#include <detours.h>
 
 // Windows provides HRESULT_FROM_WIN32() but not the reverse. We need that for compat reasons.
 // Define WIN32_FROM_HRESULT() to covert an HRESULT to a Win32 Error Code if the HRESULT's facility
@@ -113,11 +113,11 @@ typedef UINT32 (WINAPI* GetPackageGraphRevisionIdFunction)();
 HRESULT WINAPI MddDetourPackageGraphInitialize() noexcept
 {
     // Use the Win11 APIs if available (instead of Detour'ing to our own implementation)
-    if (MddCore::Win11::IsSupported())
+    /*if (MddCore::Win11::IsSupported())
     {
         RETURN_IF_FAILED(MddWin11Initialize());
         return S_OK;
-    }
+    }*/
 
     // Detour package graph APIs to our implementation
     FAIL_FAST_IF_WIN32_ERROR(DetourUpdateThread(GetCurrentThread()));
@@ -170,11 +170,11 @@ HRESULT WINAPI MddDetourPackageGraphInitialize() noexcept
 HRESULT _MddDetourPackageGraphShutdown() noexcept
 {
     // Use the Win11 APIs if available (instead of Detour'ing to our own implementation)
-    if (MddCore::Win11::IsSupported())
+    /*if (MddCore::Win11::IsSupported())
     {
         MddWin11Shutdown();
         return S_OK;
-    }
+    }*/
 
     // Stop Detour'ing package graph APIs to our implementation (undo in reverse order we started Detour'ing APIs)
     if (TrueGetPackageGraphRevisionId)
@@ -237,15 +237,6 @@ LONG WINAPI DynamicGetCurrentPackageInfo3(
     UINT32* count)
 {
     return MddCore::PackageGraphManager::GetCurrentPackageInfo3(flags, packageInfoType, bufferLength, buffer, count);
-}
-
-LONG WINAPI GetCurrentStaticPackageInfo(
-    const UINT32 flags,
-    UINT32* bufferLength,
-    BYTE* buffer,
-    UINT32* count) noexcept
-{
-    return TrueGetCurrentPackageInfo(flags, bufferLength, buffer, count);
 }
 
 LONG MddGetPackageInfo1Or2(

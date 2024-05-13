@@ -5,6 +5,9 @@
 #include "Win32App.h"
 #include "MrmHook.h"
 
+#include "urfw.h"
+#include "MddDetourPackageGraph.h"
+
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -30,6 +33,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
+
+	DetourTransactionBegin();
+	MddDetourPackageGraphInitialize();
+	UrfwInitialize();
+	DetourTransactionCommit();
 
 	// TODO: Place code here.
 	winrt::init_apartment(winrt::apartment_type::single_threaded);
@@ -137,7 +145,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 		HWND hWndXamlIsland = nullptr;
 		interop->get_WindowHandle(&hWndXamlIsland);
 		RECT windowRect;
-		::GetWindowRect(hWnd, &windowRect);
+		::GetClientRect(hWnd, &windowRect);
 		::SetWindowPos(hWndXamlIsland, NULL, 0, 0, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, SWP_SHOWWINDOW);
 		_myUserControl = winrt::Xaml::MainPage();
 		_desktopWindowXamlSource.Content(_myUserControl);
@@ -234,7 +242,7 @@ void AdjustLayout(HWND hWnd)
 		HWND xamlHostHwnd = NULL;
 		check_hresult(interop->get_WindowHandle(&xamlHostHwnd));
 		RECT windowRect;
-		::GetWindowRect(hWnd, &windowRect);
+		::GetClientRect(hWnd, &windowRect);
 		::SetWindowPos(xamlHostHwnd, NULL, 0, 0, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, SWP_SHOWWINDOW);
 	}
 }
@@ -242,12 +250,12 @@ void AdjustLayout(HWND hWnd)
 HRESULT AddPackageDepends(LPCWSTR packageFamilyName)
 {
 	PWSTR packageDependencyId;
-	HRESULT hr = TryCreatePackageDependency(nullptr, packageFamilyName, {}, PackageDependencyProcessorArchitectures_None, PackageDependencyLifetimeKind_Process, nullptr, CreatePackageDependencyOptions_None, &packageDependencyId);
+	HRESULT hr = MddTryCreatePackageDependency(nullptr, packageFamilyName, {}, MddPackageDependencyProcessorArchitectures::None, MddPackageDependencyLifetimeKind::Process, nullptr, MddCreatePackageDependencyOptions::None, &packageDependencyId);
 	if (SUCCEEDED(hr))
 	{
-		PACKAGEDEPENDENCY_CONTEXT context;
+		MDD_PACKAGEDEPENDENCY_CONTEXT context;
 		PWSTR packageFullName;
-		hr = AddPackageDependency(packageDependencyId, 0, AddPackageDependencyOptions_None, &context, &packageFullName);
+		hr = MddAddPackageDependency(packageDependencyId, 0, MddAddPackageDependencyOptions::None, &context, &packageFullName);
 		if (SUCCEEDED(hr))
 		{
 			HeapFree(GetProcessHeap(), 0, packageFullName);
