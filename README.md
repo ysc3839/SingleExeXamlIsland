@@ -29,3 +29,7 @@ This part of code is in [winui2 branch](https://github.com/ysc3839/SingleExeXaml
 
 Because of a bug of current Windows 11, the dynamic dependency API functions is not present in `kernel32.dll`, they are in `kernelbase.dll` or `kernel.appcore.dll` (This is forwards to `kernelbase.dll`). However the import library provided by Windows 11 SDK declares they are in `kernel32.dll`, which makes the program unable to start.\
 You have to load those functions manually using `GetProcAddress`, or link with `OneCoreUAP_apiset.Lib`, or create an import library that links to `kernelbase.dll`.
+
+# WinUI 2 on Windows 10
+With `Microsoft Dynamic Dependency` code from [WindowsAppSDK](https://github.com/microsoft/WindowsAppSDK/tree/main/dev/DynamicDependency/API), now it's able to use WinUI 2 on Windows 10.\
+This part of code is in [winui2-win10 branch](https://github.com/ysc3839/SingleExeXamlIsland/tree/winui2-win10).
